@@ -1,0 +1,15 @@
+{
+    "Marvel.exe": {
+        "q": {
+            "filename": "Qiguanchanghong.mp3",
+            "volume": -15,
+            "process": "Marvel.exe"
+        }
+    },
+    "default": {
+        "j": {
+            "filename": "REPO Huntsman Echoed.mp3",
+            "volume": -5
+        }
+    }
+}
