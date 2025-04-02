@@ -27,6 +27,8 @@ class PySoundBoard:
             if ":" in message:
                 message = message.split(":")
 
+                print(message)
+
                 match message[0]:
                     case "pressed":
                         self.overlay.updateKey(message[1])
@@ -35,19 +37,17 @@ class PySoundBoard:
                         self.overlay.updateFilename(message[1])
                         break
                     case "sbStatus":
-                        #Disabilita/abilita soundboard
-                        pass 
+                        self.board.toggleSoundboard(message[1] == "True")
+                        self.overlay.updateStatus("ENABLED!" if message[1] == "True" else "DISABLED!")
+                        break 
                     case "ovStatus":
-                        #Disabilita/abilita overlay
-                        pass
+                        self.overlay.toggleOveray(message[1] == "True")
+                        break
                     case "addBind":
-                        #Apri finestra per aggiunta bind
-                        pass
+                        break
                     case "listBinds":
                         #Apre finestra (o solo file di testo) lista bind
                         pass
-
-            print(message)  # Process the message (e.g., log it or update UI)
 
         self.root.after(100, self.process_queue)
 

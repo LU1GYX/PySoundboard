@@ -18,6 +18,7 @@ class SoundBoard:
         self.bindsFile = "binds.json" #Nome del file per le bind
         self.binds = {} #Container delle Binds
         self.queue = queue
+        self.enabled = True
 
         self.audio = {
             "filename": None,
@@ -171,8 +172,11 @@ class SoundBoard:
     def start(self):
         while True:
             event = keyboard.read_event()
-            if event.event_type == keyboard.KEY_DOWN:
+            if event.event_type == keyboard.KEY_DOWN and self.enabled:
                 self.onKey(event)
+
+    def toggleSoundboard(self, enabled: bool): 
+        self.enabled = enabled            
 
     def installPacket(self, url: str):
         zipFile = False
