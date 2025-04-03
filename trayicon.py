@@ -29,17 +29,17 @@ class TrayIcon:
 
     def toggleOverlay(self):
         self.ovStatus = not self.ovStatus
-        self.queue.put("ovStatus:{0}".format(self.ovStatus))
+        self.queue.put("ovStatus|{0}".format(self.ovStatus))
 
     def toggleSoundboard(self):
         self.sbStatus = not self.sbStatus
-        self.queue.put("sbStatus:{0}".format(self.sbStatus))
+        self.queue.put("sbStatus|{0}".format(self.sbStatus))
 
     def addBind(self):
         self.queue.put("addBind")
 
     def listBinds(self):
-        self.queue.put("listBind")
+        self.queue.put("listBinds")
 
     def closeEverything(self):
         self.icon.stop()

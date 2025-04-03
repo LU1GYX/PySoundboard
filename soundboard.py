@@ -10,6 +10,7 @@ import subprocess
 import zipfile
 import shutil
 import queue
+from mutagen.mp3 import MP3
 
 class SoundBoard:
     def __init__(self, queue: queue.Queue):
@@ -26,18 +27,19 @@ class SoundBoard:
             "buffer": None, #Salvataggio locale audio appena riprodotto
             "sample": None, #Framerate dell'audio
             "latest": None, #Salvataggio key appena premuta
-            "thread": None #Thread per la riproduzione async
+            "thread": None, #Thread per la riproduzione async
+            "timer": None, #Timer per il callback
         }
 
     def init(self):
         self.findVirtualCable()
 
         if self.vcable == None:
-            return
+            raise Exception("Virtual Audio Cable not found.")
 
         self.loadBinds()
 
-        return threading.Thread(target=self.start, daemon=True)
+        return threading.Thread(target=self.scanKey, daemon=True)
 
     def findVirtualCable(self):
         devices = [device for device in sd.query_devices() if 'CABLE Input (VB-Audio Virtual Cable)' in device["name"]]
@@ -53,8 +55,9 @@ class SoundBoard:
             return
 
         for device in devices:
-            if device['max_output_channels'] == 16: #Da provare anche quello a 2 canali a vedere se si sente meglio
+            if device['max_output_channels'] > 2: #Da provare anche quello a 2 canali a vedere se si sente meglio
                 self.vcable = device
+                self.outChs = device['max_output_channels']
                 print(f'Virtual audio cable found: {self.vcable["name"]}')
                 return
 
@@ -71,62 +74,52 @@ class SoundBoard:
         except FileNotFoundError:
             print("'{0}' file not found. Check the path is right.")
         except OSError as e: 
-            print("Error in opening '{0}' file. Error: {1}".format(self.bindsFile, e))
+            print("Error in opening '{0}' file.Error: \n{1}".format(self.bindsFile, e))
 
-    def addBind(self):
-        while True:
-            key = input("Enter key for binding: ").strip()
-            if len(key) == 1 and key.isprintable():
-                break
-            print("Please enter a single valid character")
+    def addBind(self, data: dict  = None):
+        try:
+            if data == None or None in data.values():
+                raise ValueError("Missing data in bind.")
 
-        while True:
-            filename = input("Enter audio filename (with extension): ").strip()
-            if os.path.exists(os.path.join("./sounds", filename)):
-                break
-            print("File not found in sounds directory")
+            if data != None:
+                filename = data["filename"]
+                key = data["key"]
+                volume = int(data["volume"])
+                process = data["process"]
 
-        while True:
+            new_bind = {
+                "filename": filename,
+                "volume": volume
+            }
+            
             try:
-                volume = float(input("Enter volume adjustment in dB (e.g. 5.0): "))
-                if -100 <= volume <= 100:
-                    break
-                print("Volume must be between -100 and 100 dB")
-            except ValueError:
-                print("Please enter a valid number")
+                self.binds[process][key] = new_bind
+            except KeyError:
+                self.binds[process] = {}
 
-        process = input("Enter process name to monitor (optional, press Enter to skip): ").strip()
-        if process and not any(proc.name() == process for proc in psutil.process_iter()):
-            print("Warning: Process not currently running")
+            self.binds[process][key] = new_bind    
+            
+            with open('binds.json', 'w') as f:
+                json.dump(self.binds, f, indent=4)
+            
+            print(f"Bind added for key: {key}")
 
-        new_bind = {
-            "filename": filename,
-            "volume": volume
-        }
-        
-        if process:
-            new_bind["process"] = process
-    
-        self.binds[key] = new_bind
-        
-        with open('binds.json', 'w') as f:
-            json.dump(self.binds, f, indent=4)
-        
-        print(f"Bind added for key: {key}")
+            self.loadBinds()
+        except Exception as e:
+            self.queue.put("error|Cannot add Bind. Error:" + str(e))
 
-        self.loadBinds()
-
-    def playAudio(self):
-        self.queue.put("playing:{0}".format(self.audio["filename"]))
-        sd.play(data=self.audio["buffer"], samplerate=self.audio["sample"], device=self.vcable['index'])
-        self.audio["playing"] = False
+    def scanKey(self):
+        while True:
+            event = keyboard.read_event()
+            if event.event_type == keyboard.KEY_DOWN and self.enabled:
+                self.onKey(event)
 
     def onKey(self, event):    
         key = event.name.lower()
         process = "default"
         
         #print("Pressed {0}".format(key[0]), end="\r", flush=True)
-        self.queue.put("pressed:{0}".format(key))
+        self.queue.put("pressed|{0}".format(key))
 
         #Se un processo e' specificato nel file, allora seguo solo il processo
         #altrimenti ez skip
@@ -138,42 +131,56 @@ class SoundBoard:
 
         keyBinds = self.binds[process]
 
-        if key in keyBinds and not self.audio["playing"]:
+        if key in keyBinds:
             keyBind = keyBinds[key]
 
-            self.audio["playing"] = True
+            if os.path.exists(os.path.abspath(keyBind["filename"])):
+                if not self.audio["playing"]:
+                    #Se la key premuta e' la stessa, evito di ricaricare il tutto
+                    if key != self.audio["latest"]:
+                        self.audio["filename"] = keyBind["filename"]
+                        #Carico il file
+                        audio = AudioSegment.from_mp3(os.path.abspath(keyBind["filename"]))
+                        
+                        #Sistemo il volume
+                        volume_change_db = keyBind["volume"] 
+                        audio = audio + volume_change_db
 
-            #Se la key premuta e' la stessa, evito di ricaricare il tutto
-            if key != self.audio["latest"]:
-                self.audio["filename"] = keyBind["filename"]
+                        #Salvo tutte le info necessarie a far partire l'audio nel thread
+                        self.audio["buffer"] = np.array(audio.get_array_of_samples()).reshape((-1, 2))
+                        self.audio["sample"] = audio.frame_rate
+                        self.audio["length"] = MP3(os.path.abspath(keyBind["filename"])).info.length
 
-                #Carico il file
-                audio = AudioSegment.from_mp3("./sounds/" + keyBind["filename"])
-                    
-                #Sistemo il volume
-                volume_change_db = keyBind["volume"] 
-                audio = audio + volume_change_db
+                    #Runno tutto nel thread, salvando la reference ad esso per eventualmente stopparlo
+                    self.audio["playing"] = True
+                    self.audio["thread"] = threading.Thread(target=self.playAudio, daemon=True)
+                    self.audio["thread"].run()
+            else:
+                self.queue.put("playing|File NOT Found!")
 
-                #Salvo tutte le info necessarie a far partire l'audio nel thread
-                self.audio["buffer"] = np.array(audio.get_array_of_samples()).reshape((-1, 2))
-                self.audio["sample"] = audio.frame_rate
-                self.audio["latest"] = key
-
-
-            #Runno tutto nel thread, salvando la reference ad esso per 
-            #eventualmente stopparlo
-            self.audio["thread"] = threading.Thread(target=self.playAudio, daemon=True)
-            self.audio["thread"].run()
+            self.audio["latest"] = key
             
-        if key == self.stopKey:
-            sd.stop()      
-            self.queue.put_nowait("playing:INTERRUPTED!")
+        if key == self.stopKey and self.audio["playing"]:    
+            self.stopAudio()
+            self.audio["latest"] = key
 
-    def start(self):
-        while True:
-            event = keyboard.read_event()
-            if event.event_type == keyboard.KEY_DOWN and self.enabled:
-                self.onKey(event)
+    def playAudio(self):
+        self.queue.put("playing|{0}".format(self.audio["filename"]))
+        
+        sd.play(data=self.audio["buffer"], samplerate=self.audio["sample"], device=self.vcable['index'])
+
+        self.audio["timer"] = threading.Timer(self.audio["length"], self.stopAudio)
+        self.audio["timer"].start()
+
+    def stopAudio(self):
+        sd.stop()
+        self.audio["playing"] = False
+        self.queue.put_nowait("playing|INTERRUPTED!")
+
+        #Resetto il timer (failsafe nel caso di spam di pauseButton)
+        if self.audio["timer"] != None:
+            self.audio["timer"].cancel()
+            self.audio["timer"] = None
 
     def toggleSoundboard(self, enabled: bool): 
         self.enabled = enabled            

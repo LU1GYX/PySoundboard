@@ -1,15 +1,22 @@
 {
     "Marvel.exe": {
         "q": {
-            "filename": "Qiguanchanghong.mp3",
-            "volume": -15,
-            "process": "Marvel.exe"
+            "filename": "./sounds/Qiguanchanghong.mp3",
+            "volume": -15
         }
     },
     "default": {
         "j": {
-            "filename": "REPO Huntsman Echoed.mp3",
+            "filename": "./sounds/REPO Huntsman Echoed.mp3",
             "volume": -5
+        },
+        "o": {
+            "filename": "C:/Users/galax/Desktop/Loops/aoharu.mp3",
+            "volume": -5
+        },
+        "k": {
+            "filename": "C:/Users/galax/Desktop/Loops/luminous memory.mp3",
+            "volume": -10
         }
     }
 }

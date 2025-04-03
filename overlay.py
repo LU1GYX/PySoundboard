@@ -1,6 +1,6 @@
 # Standard Library
 import tkinter
-import tkvideo as tkv
+#import tkvideo as tkv
 import queue
 from PIL import Image, ImageTk
 
@@ -25,17 +25,15 @@ class Overlay:
 
 		self.filenameLabel = tkinter.Label(font=("fixedsys", 10), fg="red", bg="#f8c300")
 
-		# Set up Ping Label
+		# Set up the video
 		#self.videoLabel = tkinter.Label(self.root)
 		#self.videoLabel.configure(bg="#f8c300")
 		#self.videoLabel.grid(row=1, column=0)
-		
-		# Set up the video
+	
 		""" self.videoPlayer = tkv.tkvideo(r"C:\\Users\\galax\\Desktop\\Loops\\videoplayback.mp4", self.videoLabel, loop=1)
 		self.videoPlayer.play() """
 
-		# Define Window Geometry
-		self.root.geometry(f"+{self.root.winfo_screenwidth() // 4 }+10")  # Move window to (1/5 width, 100 pixels from top)
+		self.root.geometry(f"+{self.root.winfo_screenwidth() // 4 }+10")
 		self.root.overrideredirect(True) #NON METTE LA ROBA DI WINDOWS DI DEFAULT
 		self.root.wm_attributes("-topmost", True) #SEMPRE IN PRIMO PIANO
 		self.root.wm_attributes("-transparentcolor", "#f8c300")
@@ -62,5 +60,8 @@ class Overlay:
 		self.filenameLabel.config(text="Playing: {0}".format(filename))
 		self.filenameLabel.pack()
 
-		self.root.after(2000, self.filenameLabel.pack_forget)
+		if self.filenameLabel.winfo_ismapped():
+			self.root.after_cancel(self.filenameLabelUpdate)
+		
+		self.filenameLabelUpdate = self.root.after(2000, self.filenameLabel.pack_forget)
 
