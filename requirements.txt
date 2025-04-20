@@ -6,3 +6,5 @@ psutil==7.0.0
 mutagen==1.47.0
 pillow==11.1.0
 pystray==0.19.5
+soundfile
+audioop-lts

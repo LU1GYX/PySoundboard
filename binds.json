@@ -10,12 +10,12 @@
             "filename": "./sounds/REPO Huntsman Echoed.mp3",
             "volume": -5
         },
-        "o": {
-            "filename": "C:/Users/galax/Desktop/Loops/aoharu.mp3",
-            "volume": -5
+        "q": {
+            "filename": "./sounds/Qiguanchanghong.mp3",
+            "volume": -15
         },
-        "k": {
-            "filename": "C:/Users/galax/Desktop/Loops/luminous memory.mp3",
+        "l": {
+            "filename": "./sounds/Hamster.mp3",
             "volume": -10
         }
     }

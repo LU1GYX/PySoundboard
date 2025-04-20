@@ -17,7 +17,7 @@ class PySoundBoard:
 
     def start(self):
         # Start threads with queue communication
-        self.board.init().start()
+        self.board.init()
         self.tray.init().start()
         self.overlay.init()
 
@@ -179,7 +179,7 @@ class PySoundBoard:
             for item in tree.get_children():
                 tree.delete(item)  # Clear existing items
 
-            for key, bind in self.board.binds.items():
+            for key, bind in self.board.binds["data"].items():
                 for keyBind, bindData in bind.items():
                     tree.insert("", "end", values=(key, keyBind, bindData["filename"], bindData["volume"]))
 
