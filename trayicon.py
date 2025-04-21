@@ -12,7 +12,7 @@ class TrayIcon:
         self.queue = queue
         self.icon = pystray.Icon(
             "Soundboard",
-            Image.new('RGB', (64, 64), 'black'),
+            Image.open("./src/icon_no_text.png"),
             menu=pystray.Menu(
                 pystray.MenuItem("Toggle SoundBoard", self.toggleSoundboard, checked=lambda item: self.sbStatus),
                 pystray.MenuItem("Add Bind", self.addBind),

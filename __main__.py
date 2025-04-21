@@ -168,7 +168,7 @@ class PySoundBoard:
                     tree.column(col, width=10, anchor="center")
                     pass
                 case "Filename":
-                    tree.column(col, width=200, anchor="center")
+                    tree.column(col, width=200)
                     pass
                 case "Volume":
                     tree.column(col, width=10, anchor="center")
@@ -195,5 +195,7 @@ if __name__ == "__main__":
     app.setupAddBind()
     app.setupListBind()
     app.start()
+
+    app.queue.put("sbStatus|" + str(app.board.enabled))
 
     root.mainloop()

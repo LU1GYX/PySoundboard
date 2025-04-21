@@ -240,7 +240,7 @@ class SoundBoard:
         if key in keyBinds:
             keyBind = keyBinds[key]
 
-            if os.path.exists(os.path.abspath(keyBind["filename"])):
+            if path.exists(path.abspath(keyBind["filename"])):
                 if not self.playing:
                     #Se la key premuta e' la stessa, evito di ricaricare il tutto
                     if key != self.keyData["latest"]:
