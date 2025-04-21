@@ -1,4 +1,6 @@
-﻿# PySoundboard
+﻿<p align="center"><img src="https://github.com/LU1GYX/PySoundboard/blob/main/src/icon_no_text.png?raw=true" alt="TkForge Logo" width="100" height="100"></p>
+
+# PySoundboard
 
 An Almost-Without dependencies Python Soundboard! (WINDOWS ONLY!)
 
@@ -72,3 +74,12 @@ The bindings inserted in the 'binds.json' is formatted this way:
 Simply copy this and modify the values you need to change.
 
 > To see the current configured bindings, you can use the "List Binds" option under the "Add Bind"!
+
+#Todo
+
+- [ ] Add presistent setting file
+- [ ] Revamp for tk windows
+- [ ] Overlay Customization
+- - [ ] Size
+- - [ ] Text
+- - [ ] Colors
