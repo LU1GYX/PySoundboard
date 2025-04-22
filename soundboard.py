@@ -5,16 +5,19 @@ import numpy as np
 import json
 from pydub import AudioSegment
 from psutil import process_iter
+from configparser import ConfigParser
 
 from os import path, mkdir, walk
 from threading import Thread, Lock
 from queue import Queue
+from mutagen.mp3 import MP3
+
 
 class SoundBoard:
     def __init__(self, queue: Queue):
-        #self.vcable = None #Uscita audio
+        self.config = ConfigParser().read_file(open("./settings.ini"))
         self.queue = queue
-        self.enabled = True
+        self.enabled = self.config["soundboard"]["enabled"]
         self.playing = False #Flag se l'audio parte
 
         self.stream = {
@@ -24,13 +27,13 @@ class SoundBoard:
         }
 
         self.binds = {
-            "filename": "binds.json", #Nome del file per le bind
+            "filename": self.config["soundboard"]["bindsfile"], #Nome del file per le bind
             "data": {} #Container delle Binds
         }
 
         self.keyData = {
             "latest": None, #Salvataggio key appena premuta
-            "stopOn": "p", #Key per interruzione dell'audioo
+            "stopOn": self.config["soundboard"]["stopkey"], #Key per interruzione dell'audioo
         }
 
         self.audio = {
@@ -39,18 +42,19 @@ class SoundBoard:
             "samplerate": None, #Framerate dell'audio
             "lenght": None, #Quando è lunga la canzone (ms?)
             "channels": None,
-            "gain": 0.1
+            "gain": float(self.config["microphone.virtual"]["gain"])
         }
 
         self.virtualMic = {
-            "index": None,
+            "index": int(self.config["microphone.virtual"]["index"]) or None,
+            "name": self.config["microphone.virtual"]["name"],
             "channels": None,
             "samplerate": None,
         }
 
         self.realMic = {
-            "index": None,
-            "gain": 1.0
+            "index": int(self.config["microphone.real"]["index"]) or None,
+            "gain": float(self.config["microphone.real"]["gain"])
         }
 
     def init(self):
@@ -144,7 +148,7 @@ class SoundBoard:
 
         #Cerco il virtual cable
         #FIX: Uso "CABLE Input" perchè windows taglia i caratteri del nome dopo i 20 caratteri
-        outputDevices = [device for device in sorted(sd.query_devices(), key=lambda d: d["index"]) if "CABLE Input" in device["name"]]
+        outputDevices = [device for device in sorted(sd.query_devices(), key=lambda d: d["index"]) if self.virtualMic["name"] in device["name"]]
 
         #Prendo sempre il primo dato che è quello originale 
         #TODO: aggiungere controlli per samplerate == 44100 e max_output_channels == 8 //Valori di default di VB
@@ -174,7 +178,7 @@ class SoundBoard:
     def loadBinds(self):
         try:
             # Load JSON file
-            with open('binds.json', 'r') as f: 
+            with open(self.binds["filename"], 'r') as f: 
                 self.binds["data"] = json.load(f)
                 print(f'Loaded {len(self.binds["data"])} binds.')
 
@@ -209,7 +213,7 @@ class SoundBoard:
 
             self.binds["data"][process][key] = new_bind    
             
-            with open('binds.json', 'w') as f:
+            with open(self.binds["filename"], 'w') as f:
                 json.dump(self.binds["data"], f, indent=4)
             
             print(f"Bind added for key: {key}")
@@ -261,21 +265,19 @@ class SoundBoard:
                         volume_db = keyBind["volume"]  # Volume in decibels
                         volume_factor = 10 ** (volume_db / 20)  # Convert dB to linear scale
                         self.audio["buffer"] *= volume_factor
-                        """ audio = AudioSegment.from_mp3(os.path.abspath(keyBind["filename"]))
+                        audio = AudioSegment.from_mp3(path.abspath(keyBind["filename"]))
                         
                         #Sistemo il volume
-                        volume_change_db = keyBind["volume"] 
-                        audio = audio + volume_change_db
+                        audio = audio + volume_db
 
                         #Salvo tutte le info necessarie a far partire l'audio nel thread
                         self.audio["buffer"] = np.array(audio.get_array_of_samples()).reshape((-1, 2))
                         self.audio["sample"] = audio.frame_rate
-                        self.audio["length"] = MP3(os.path.abspath(keyBind["filename"])).info.length
+                        self.audio["length"] = MP3(path.abspath(keyBind["filename"])).info.length
 
-                    #Runno tutto nel thread, salvando la reference ad esso per eventualmente stopparlo
-                    self.playing = True
-                    self.playThread = Thread(target=self.playAudio, daemon=True)
-                    self.playThread.run() """
+                        #Runno tutto nel thread, salvando la reference ad esso per eventualmente stopparlo
+                        self.playThread = Thread(target=self.playEchoAudio, daemon=True)
+                        self.playThread.run()
             else:
                 self.queue.put("playing|File NOT Found!")
 
@@ -332,3 +334,6 @@ class SoundBoard:
         self.audio["buffer"] = np.array([])
         self.stream["fileposition"] = 0
         self.queue.put("playing|STOPPED")
+
+    def playEchoAudio(self):
+        pass
